@@ -1,18 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { storage, Usuario } from '@/lib/storage'
 import { useAuth } from '@/components/AuthProvider'
 import { User, Plus, Edit, Trash2, Shield, UserCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
-
-interface Usuario {
-  id: string
-  email: string
-  nombre: string
-  rol: 'admin' | 'usuario'
-  created_at: string
-}
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -27,43 +19,37 @@ export default function UsuariosPage() {
     }
   }, [isAdmin])
 
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        toast.error('Error al cargar usuarios: ' + error.message)
-        return
-      }
-
-      setUsuarios(data || [])
+      const allUsuarios = storage.getUsuarios()
+      setUsuarios(allUsuarios)
     } catch (error) {
-      toast.error('Error inesperado al cargar usuarios')
+      toast.error('Error al cargar usuarios')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
       return
     }
 
     try {
-      const { error } = await supabase
-        .from('usuarios')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        toast.error('Error al eliminar usuario: ' + error.message)
+      // No permitir eliminar el último admin
+      const allUsuarios = storage.getUsuarios()
+      const admins = allUsuarios.filter(u => u.rol === 'admin')
+      
+      if (admins.length === 1 && admins[0].id === id) {
+        toast.error('No se puede eliminar el último administrador')
         return
       }
 
+      // Eliminar usuario
+      const updatedUsuarios = allUsuarios.filter(u => u.id !== id)
+      storage.saveUsuarios(updatedUsuarios)
+      
       toast.success('Usuario eliminado correctamente')
       fetchUsuarios()
     } catch (error) {
