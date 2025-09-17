@@ -217,7 +217,7 @@ export default function ReportesList() {
             </tr>
           </thead>
           <tbody>
-            ${equipos.map(equipo => `
+            ${equipos.map((equipo: any) => `
               <tr>
                 <td>${equipo.numero_serie}</td>
                 <td>${equipo.tipo_equipo}</td>
