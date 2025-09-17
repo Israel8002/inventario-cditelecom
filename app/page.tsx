@@ -18,16 +18,17 @@ export default function Home() {
   })
 
   useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       fetchStats()
     }
-  }, [user])
+  }, [user, loading])
 
   const fetchStats = async () => {
     try {
+      // Usar una consulta más eficiente con agregación
       const { data, error } = await supabase
         .from('equipos')
-        .select('estado')
+        .select('estado', { count: 'exact' })
 
       if (error) {
         console.error('Error fetching stats:', error)

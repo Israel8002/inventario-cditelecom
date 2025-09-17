@@ -56,7 +56,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('Error checking user role:', error)
+        // Intentar buscar por email como fallback
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData.user?.email) {
+          const { data: emailData } = await supabase
+            .from('usuarios')
+            .select('rol')
+            .eq('email', userData.user.email)
+            .single()
+          
+          setIsAdmin(emailData?.rol === 'admin')
+        }
         return
       }
 

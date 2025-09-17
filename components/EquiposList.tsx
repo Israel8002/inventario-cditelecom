@@ -17,8 +17,10 @@ export default function EquiposList() {
   const { user, isAdmin } = useAuth()
 
   useEffect(() => {
-    fetchEquipos()
-  }, [])
+    if (user) {
+      fetchEquipos()
+    }
+  }, [user])
 
   const fetchEquipos = async () => {
     try {
