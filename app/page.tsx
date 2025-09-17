@@ -9,7 +9,7 @@ import { storage, Equipo } from '@/lib/storage'
 import { Package, QrCode, FileText, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react'
 
 export default function Home() {
-  const { user, loading } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const [stats, setStats] = useState({
     totalEquipos: 0,
     equiposActivos: 0,
@@ -22,7 +22,7 @@ export default function Home() {
     if (user && !loading) {
       fetchStats()
     }
-  }, [user, loading])
+  }, [user, loading, isAdmin])
 
   const fetchStats = () => {
     try {
