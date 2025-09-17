@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase, Equipo } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
-import { Search, Plus, Edit, Trash2, Eye, QrCode } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Eye, QrCode, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function EquiposList() {
