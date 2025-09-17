@@ -249,10 +249,10 @@ export default function ReportesList() {
     return { total, activos, mantenimiento, danados, retirados }
   }
 
-  const tiposEquipos = [...new Set(equipos.map(e => e.tipo_equipo))]
-  const estados = [...new Set(equipos.map(e => e.estado))]
-  const marcas = [...new Set(equipos.map(e => e.marca))]
-  const unidades = [...new Set(equipos.map(e => e.unidad))]
+  const tiposEquipos = Array.from(new Set(equipos.map(e => e.tipo_equipo)))
+  const estados = Array.from(new Set(equipos.map(e => e.estado)))
+  const marcas = Array.from(new Set(equipos.map(e => e.marca)))
+  const unidades = Array.from(new Set(equipos.map(e => e.unidad)))
 
   if (loading) {
     return (

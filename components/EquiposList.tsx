@@ -85,8 +85,8 @@ export default function EquiposList() {
     return matchesSearch && matchesEstado && matchesTipo
   })
 
-  const tiposEquipos = [...new Set(equipos.map(e => e.tipo_equipo))]
-  const estados = [...new Set(equipos.map(e => e.estado))]
+  const tiposEquipos = Array.from(new Set(equipos.map(e => e.tipo_equipo)))
+  const estados = Array.from(new Set(equipos.map(e => e.estado)))
 
   if (loading) {
     return (
