@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from './AuthProvider'
-import { Eye, EyeOff, User, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, User, Lock, Mail, Package } from 'lucide-react'
 
 export default function LoginForm() {
   const [isLogin, setIsLogin] = useState(true)
@@ -43,20 +43,47 @@ export default function LoginForm() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'var(--gradient-surface)',
       padding: '1rem'
     }}>
-      <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+      <div className="card" style={{ 
+        width: '100%', 
+        maxWidth: '400px',
+        background: 'var(--gradient-card)',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-xl)',
+        backdropFilter: 'blur(20px)'
+      }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: 'var(--gradient-primary)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+          }}>
+            <Package size={40} style={{ color: 'white' }} />
+          </div>
           <h1 style={{ 
             fontSize: '1.875rem', 
             fontWeight: 'bold', 
             color: 'var(--text-primary)',
-            marginBottom: '0.5rem'
+            marginBottom: '0.5rem',
+            background: 'var(--gradient-primary)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
           }}>
             Sistema de Inventarios
           </h1>
-          <p style={{ color: 'var(--text-secondary)' }}>
+          <p style={{ 
+            color: 'var(--text-secondary)',
+            fontSize: '1rem'
+          }}>
             Equipos de Telecomunicaciones
           </p>
         </div>
@@ -167,14 +194,28 @@ export default function LoginForm() {
         <div style={{ 
           marginTop: '2rem', 
           padding: '1rem', 
-          backgroundColor: 'var(--background-color)',
-          borderRadius: '0.375rem',
+          background: 'var(--surface-secondary)',
+          borderRadius: '0.5rem',
           fontSize: '0.875rem',
-          color: 'var(--text-secondary)'
+          color: 'var(--text-secondary)',
+          border: '1px solid var(--border-color)'
         }}>
-          <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Credenciales de prueba:</p>
-          <p><strong>Admin:</strong> admin@telecom.com</p>
-          <p><strong>Contraseña:</strong> admin123</p>
+          <p style={{ 
+            marginBottom: '0.5rem', 
+            fontWeight: '500',
+            color: 'var(--text-primary)'
+          }}>
+            🔑 Credenciales de prueba:
+          </p>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '0.25rem',
+            fontFamily: 'monospace'
+          }}>
+            <p><strong style={{ color: 'var(--primary-color)' }}>Admin:</strong> admin@telecom.com</p>
+            <p><strong style={{ color: 'var(--primary-color)' }}>Contraseña:</strong> admin123</p>
+          </div>
         </div>
       </div>
     </div>
