@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { QrCode, Camera, CameraOff, CheckCircle, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// Importar jsQR dinámicamente para evitar problemas de SSR
+let jsQR: any = null
+
 interface QRScannerProps {
   onScan: (result: string) => void
   onClose?: () => void
@@ -21,6 +24,19 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    // Cargar jsQR dinámicamente
+    const loadJsQR = async () => {
+      try {
+        const jsQRModule = await import('jsqr')
+        jsQR = jsQRModule.default
+      } catch (error) {
+        console.error('Error loading jsQR:', error)
+        setError('Error al cargar la librería de detección QR')
+      }
+    }
+    
+    loadJsQR()
+    
     return () => {
       stopScanning()
     }
@@ -78,16 +94,21 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   }
 
   const startQRDetection = () => {
-    // Detección QR mejorada con validación
+    if (!jsQR) {
+      setError('Librería de detección QR no cargada')
+      return
+    }
+    
+    // Detección QR REAL con jsQR
     scanIntervalRef.current = setInterval(() => {
       if (videoRef.current && canvasRef.current && !isDetecting) {
         detectQRCode()
       }
-    }, 500) // Reducir frecuencia para mejor rendimiento
+    }, 100) // Frecuencia alta para detección en tiempo real
   }
 
   const detectQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !canvasRef.current || !jsQR) return
     
     setIsDetecting(true)
     
@@ -108,48 +129,26 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       // Obtener datos de imagen
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
       
-      // Simular detección QR más realista
-      // Solo detectar si hay suficiente contraste y patrones
-      const hasValidPattern = detectQRPattern(imageData)
+      // DETECCIÓN QR REAL con jsQR
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert"
+      })
       
-      if (hasValidPattern && Math.random() < 0.3) { // Reducir probabilidad de falsos positivos
-        const mockQRCode = generateValidSerial()
-        handleQRDetected(mockQRCode)
+      if (code && code.data) {
+        // Solo procesar si realmente se detectó un código QR
+        const detectedCode = code.data.trim()
+        
+        // Validar que el código no esté vacío
+        if (detectedCode.length > 0) {
+          console.log('Código QR detectado:', detectedCode)
+          handleQRDetected(detectedCode)
+        }
       }
     } catch (error) {
       console.error('Error detecting QR:', error)
     } finally {
       setIsDetecting(false)
     }
-  }
-
-  const detectQRPattern = (imageData: ImageData): boolean => {
-    // Simular detección de patrones QR básicos
-    // En una implementación real usarías jsQR
-    const data = imageData.data
-    let contrast = 0
-    
-    // Calcular contraste promedio
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      const brightness = (r + g + b) / 3
-      contrast += brightness
-    }
-    
-    const avgContrast = contrast / (data.length / 4)
-    
-    // Solo detectar si hay suficiente contraste (no una superficie uniforme)
-    return avgContrast > 50 && avgContrast < 200
-  }
-
-  const generateValidSerial = (): string => {
-    // Generar números de serie más realistas
-    const prefixes = ['TEL', 'COM', 'NET', 'WIFI', 'ROUT']
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
-    const numbers = Math.floor(Math.random() * 900000) + 100000
-    return `${prefix}-${numbers}`
   }
 
   const handleQRDetected = (code: string) => {
@@ -234,7 +233,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           Escanear Código QR
         </h3>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          Coloca el código QR del equipo dentro del marco para escanearlo automáticamente
+          Apunta la cámara a un código QR REAL del equipo para escanearlo automáticamente
         </p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
           <button onClick={handleManualInput} className="btn btn-outline">
@@ -361,10 +360,10 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           backdropFilter: 'blur(10px)'
         }}>
           <p style={{ margin: 0, fontWeight: '500' }}>
-            📱 Coloca el código QR dentro del marco azul
+            📱 Apunta a un código QR REAL
           </p>
           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', opacity: 0.8 }}>
-            Mantén una distancia de 15-30 cm del código
+            Solo detecta códigos QR existentes, no genera códigos falsos
           </p>
         </div>
 
@@ -395,7 +394,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         marginBottom: '1rem'
       }}>
         <p style={{ margin: 0 }}>
-          El escaneo se realizará automáticamente cuando detecte un código QR válido
+          Solo detecta códigos QR reales, no genera códigos falsos
         </p>
       </div>
 
