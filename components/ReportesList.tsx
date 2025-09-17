@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Equipo } from '@/lib/supabase'
+import { storage, Equipo } from '@/lib/storage'
 import { useAuth } from './AuthProvider'
 import { 
   FileText, 
@@ -44,57 +44,35 @@ export default function ReportesList() {
     fetchReportes()
   }, [])
 
-  const fetchEquipos = async () => {
+  const fetchEquipos = () => {
     try {
-      let query = supabase
-        .from('equipos')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (!isAdmin) {
-        query = query.eq('user_id', user?.id)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        toast.error('Error al cargar equipos: ' + error.message)
-        return
-      }
-
-      setEquipos(data || [])
+      const allEquipos = storage.getEquipos()
+      
+      // Si no es admin, solo mostrar equipos del usuario actual
+      const userEquipos = isAdmin ? allEquipos : allEquipos.filter(e => e.responsable === user?.nombre)
+      
+      setEquipos(userEquipos)
     } catch (error) {
-      toast.error('Error inesperado al cargar equipos')
+      toast.error('Error al cargar equipos')
     }
   }
 
-  const fetchReportes = async () => {
+  const fetchReportes = () => {
     try {
-      let query = supabase
-        .from('reportes')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (!isAdmin) {
-        query = query.eq('user_id', user?.id)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        toast.error('Error al cargar reportes: ' + error.message)
-        return
-      }
-
-      setReportes(data || [])
+      const allReportes = storage.getReportes()
+      
+      // Si no es admin, solo mostrar reportes del usuario actual
+      const userReportes = isAdmin ? allReportes : allReportes.filter(r => r.responsable === user?.nombre)
+      
+      setReportes(userReportes)
     } catch (error) {
-      toast.error('Error inesperado al cargar reportes')
+      toast.error('Error al cargar reportes')
     } finally {
       setLoading(false)
     }
   }
 
-  const generarReporte = async (tipo: string) => {
+  const generarReporte = (tipo: string) => {
     try {
       setLoading(true)
       
@@ -123,21 +101,17 @@ export default function ReportesList() {
       const titulo = `Reporte de ${tipo} - ${new Date().toLocaleDateString('es-ES')}`
       
       const reporteData = {
+        id: crypto.randomUUID(),
         titulo,
         tipo_reporte: tipo,
         filtros,
         datos: equiposFiltrados,
-        user_id: user?.id
+        responsable: user?.nombre || 'Usuario',
+        created_at: new Date().toISOString()
       }
 
-      const { error } = await supabase
-        .from('reportes')
-        .insert(reporteData)
-
-      if (error) {
-        toast.error('Error al generar reporte: ' + error.message)
-        return
-      }
+      // Guardar reporte en localStorage
+      storage.addReporte(reporteData)
 
       toast.success('Reporte generado correctamente')
       fetchReportes()
