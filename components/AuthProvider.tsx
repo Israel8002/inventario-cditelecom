@@ -1,12 +1,11 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { storage, Usuario } from '@/lib/storage'
 import toast from 'react-hot-toast'
 
 interface AuthContextType {
-  user: User | null
+  user: Usuario | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, nombre: string) => Promise<void>
@@ -17,126 +16,92 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    // Obtener sesión inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        checkUserRole(session.user.id)
-      }
-      setLoading(false)
-    })
-
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await checkUserRole(session.user.id)
-        } else {
-          setIsAdmin(false)
-        }
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
+    // Inicializar datos por defecto
+    storage.initializeDefaultData()
+    
+    // Obtener usuario actual
+    const currentUser = storage.getCurrentUser()
+    setUser(currentUser)
+    setIsAdmin(currentUser?.rol === 'admin')
+    setLoading(false)
   }, [])
-
-  const checkUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        // Intentar buscar por email como fallback
-        const { data: userData } = await supabase.auth.getUser()
-        if (userData.user?.email) {
-          const { data: emailData } = await supabase
-            .from('usuarios')
-            .select('rol')
-            .eq('email', userData.user.email)
-            .single()
-          
-          setIsAdmin(emailData?.rol === 'admin')
-        }
-        return
-      }
-
-      setIsAdmin(data?.rol === 'admin')
-    } catch (error) {
-      console.error('Error checking user role:', error)
-    }
-  }
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        toast.error('Error al iniciar sesión: ' + error.message)
+      setLoading(true)
+      
+      // Buscar usuario por email
+      const usuarios = storage.getUsuarios()
+      const usuario = usuarios.find(u => u.email === email)
+      
+      if (!usuario) {
+        toast.error('Usuario no encontrado')
         return
       }
 
+      // En un sistema real, aquí verificarías la contraseña
+      // Por simplicidad, aceptamos cualquier contraseña
+      setUser(usuario)
+      setIsAdmin(usuario.rol === 'admin')
+      storage.setCurrentUser(usuario)
+      
       toast.success('Sesión iniciada correctamente')
     } catch (error) {
       toast.error('Error inesperado al iniciar sesión')
+    } finally {
+      setLoading(false)
     }
   }
 
   const signUp = async (email: string, password: string, nombre: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      })
-
-      if (error) {
-        toast.error('Error al registrarse: ' + error.message)
+      setLoading(true)
+      
+      // Verificar si el usuario ya existe
+      const usuarios = storage.getUsuarios()
+      const usuarioExistente = usuarios.find(u => u.email === email)
+      
+      if (usuarioExistente) {
+        toast.error('El usuario ya existe')
         return
       }
 
-      if (data.user) {
-        // Crear registro en la tabla usuarios
-        const { error: insertError } = await supabase
-          .from('usuarios')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            nombre,
-            rol: 'usuario'
-          })
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError)
-        }
+      // Crear nuevo usuario
+      const nuevoUsuario: Usuario = {
+        id: crypto.randomUUID(),
+        email,
+        nombre,
+        rol: 'usuario',
+        created_at: new Date().toISOString()
       }
 
-      toast.success('Registro exitoso. Revisa tu correo para confirmar tu cuenta.')
+      // Guardar usuario
+      usuarios.push(nuevoUsuario)
+      storage.saveUsuarios(usuarios)
+      
+      // Establecer como usuario actual
+      setUser(nuevoUsuario)
+      setIsAdmin(false)
+      storage.setCurrentUser(nuevoUsuario)
+      
+      toast.success('Usuario creado correctamente')
     } catch (error) {
       toast.error('Error inesperado al registrarse')
+    } finally {
+      setLoading(false)
     }
   }
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      
-      if (error) {
-        toast.error('Error al cerrar sesión: ' + error.message)
-        return
-      }
-
+      setUser(null)
+      setIsAdmin(false)
+      storage.setCurrentUser(null as any)
       toast.success('Sesión cerrada correctamente')
     } catch (error) {
       toast.error('Error inesperado al cerrar sesión')

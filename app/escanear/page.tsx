@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import QRScanner from '@/components/QRScanner'
 import Layout from '@/components/Layout'
 import { useAuth } from '@/components/AuthProvider'
@@ -10,7 +10,10 @@ export default function EscanearPage() {
   const [scannedCode, setScannedCode] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
+
+  const returnUrl = searchParams.get('return') || '/equipos'
 
   useEffect(() => {
     setMounted(true)
@@ -36,8 +39,15 @@ export default function EscanearPage() {
 
   const handleScan = (code: string) => {
     setScannedCode(code)
-    // Redirigir al formulario de nuevo equipo con el código escaneado
-    router.push(`/equipos/nuevo?serie=${encodeURIComponent(code)}`)
+    
+    // Si hay una URL de retorno, redirigir allí con el código
+    if (returnUrl.includes('/equipos/nuevo') || returnUrl.includes('/equipos/editar')) {
+      const separator = returnUrl.includes('?') ? '&' : '?'
+      router.push(`${returnUrl}${separator}serie=${encodeURIComponent(code)}`)
+    } else {
+      // Redirigir al formulario de nuevo equipo con el código escaneado
+      router.push(`/equipos/nuevo?serie=${encodeURIComponent(code)}`)
+    }
   }
 
   return (

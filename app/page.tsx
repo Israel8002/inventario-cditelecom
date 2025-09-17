@@ -3,8 +3,9 @@
 import { useAuth } from '@/components/AuthProvider'
 import LoginForm from '@/components/LoginForm'
 import Layout from '@/components/Layout'
+import DataManager from '@/components/DataManager'
 import { useState, useEffect } from 'react'
-import { supabase, Equipo } from '@/lib/supabase'
+import { storage, Equipo } from '@/lib/storage'
 import { Package, QrCode, FileText, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react'
 
 export default function Home() {
@@ -23,19 +24,13 @@ export default function Home() {
     }
   }, [user, loading])
 
-  const fetchStats = async () => {
+  const fetchStats = () => {
     try {
-      // Usar una consulta más eficiente con agregación
-      const { data, error } = await supabase
-        .from('equipos')
-        .select('estado', { count: 'exact' })
-
-      if (error) {
-        console.error('Error fetching stats:', error)
-        return
-      }
-
-      const equipos = data || []
+      const allEquipos = storage.getEquipos()
+      
+      // Si no es admin, solo contar equipos del usuario actual
+      const equipos = isAdmin ? allEquipos : allEquipos.filter(e => e.responsable === user?.nombre)
+      
       const totalEquipos = equipos.length
       const equiposActivos = equipos.filter(e => e.estado === 'Activo').length
       const equiposMantenimiento = equipos.filter(e => e.estado === 'Mantenimiento').length
@@ -248,6 +243,11 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Gestión de Datos (Solo Administradores) */}
+        {isAdmin && (
+          <DataManager />
+        )}
+
         {/* Información del Sistema */}
         <div className="card" style={{ marginTop: '2rem' }}>
           <h3 style={{ 
@@ -279,6 +279,7 @@ export default function Home() {
                 <li>Reportes e impresión</li>
                 <li>Diseño responsive</li>
                 <li>Multiplataforma</li>
+                <li>Almacenamiento local (sin servidor)</li>
               </ul>
             </div>
 

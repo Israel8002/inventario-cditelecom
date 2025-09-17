@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Equipo } from '@/lib/supabase'
+import { useSearchParams } from 'next/navigation'
+import { storage, Equipo } from '@/lib/storage'
 import { useAuth } from './AuthProvider'
 import { ArrowLeft, Save, QrCode } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -13,6 +14,7 @@ interface EquipoFormProps {
 
 export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
   const [loading, setLoading] = useState(false)
+  const searchParams = useSearchParams()
   const [equipo, setEquipo] = useState<Partial<Equipo>>({
     numero_serie: '',
     tipo_equipo: '',
@@ -53,26 +55,32 @@ export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
   ]
 
   useEffect(() => {
+    // Verificar si hay un código escaneado en la URL
+    const serieEscaneada = searchParams.get('serie')
+    if (serieEscaneada) {
+      setEquipo(prev => ({
+        ...prev,
+        numero_serie: serieEscaneada
+      }))
+    }
+
     if (equipoId) {
       fetchEquipo()
     }
-  }, [equipoId])
+  }, [equipoId, searchParams])
 
-  const fetchEquipo = async () => {
+  const fetchEquipo = () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('equipos')
-        .select('*')
-        .eq('id', equipoId)
-        .single()
-
-      if (error) {
-        toast.error('Error al cargar equipo: ' + error.message)
+      const equipos = storage.getEquipos()
+      const equipoEncontrado = equipos.find(e => e.id === equipoId)
+      
+      if (!equipoEncontrado) {
+        toast.error('Equipo no encontrado')
         return
       }
 
-      setEquipo(data)
+      setEquipo(equipoEncontrado)
     } catch (error) {
       toast.error('Error inesperado al cargar equipo')
     } finally {
@@ -80,41 +88,30 @@ export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
       const equipoData = {
         ...equipo,
-        user_id: user?.id,
-        fecha_ultima_revision: equipo.fecha_ultima_revision || null
+        responsable: user?.nombre || 'Usuario',
+        fecha_ultima_revision: equipo.fecha_ultima_revision || undefined
       }
 
       if (equipoId) {
         // Actualizar equipo existente
-        const { error } = await supabase
-          .from('equipos')
-          .update(equipoData)
-          .eq('id', equipoId)
-
-        if (error) {
-          toast.error('Error al actualizar equipo: ' + error.message)
+        const equipoActualizado = storage.updateEquipo(equipoId, equipoData)
+        
+        if (!equipoActualizado) {
+          toast.error('Error al actualizar equipo')
           return
         }
 
         toast.success('Equipo actualizado correctamente')
       } else {
         // Crear nuevo equipo
-        const { error } = await supabase
-          .from('equipos')
-          .insert(equipoData)
-
-        if (error) {
-          toast.error('Error al crear equipo: ' + error.message)
-          return
-        }
-
+        storage.addEquipo(equipoData as any)
         toast.success('Equipo creado correctamente')
       }
 
@@ -138,9 +135,10 @@ export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
     }))
   }
 
-  const generateQR = () => {
-    // Esta función se implementará con la librería QR
-    toast.success('Función de QR en desarrollo')
+  const handleScanQR = () => {
+    // Redirigir a la página de escaneo con parámetro para volver
+    const currentUrl = window.location.pathname
+    window.location.href = `/escanear?return=${encodeURIComponent(currentUrl)}`
   }
 
   if (loading && equipoId) {
@@ -193,7 +191,7 @@ export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
                 Número de Serie *
                 <button
                   type="button"
-                  onClick={generateQR}
+                  onClick={handleScanQR}
                   className="btn btn-outline"
                   style={{ 
                     marginLeft: '0.5rem', 
@@ -202,7 +200,7 @@ export default function EquipoForm({ equipoId, onSuccess }: EquipoFormProps) {
                   }}
                 >
                   <QrCode size={16} />
-                  Generar QR
+                  Escanear QR
                 </button>
               </label>
               <input

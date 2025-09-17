@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Equipo } from '@/lib/supabase'
+import { storage, Equipo } from '@/lib/storage'
 import { useAuth } from './AuthProvider'
 import { Search, Plus, Edit, Trash2, Eye, QrCode, X } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -22,52 +22,35 @@ export default function EquiposList() {
     }
   }, [user])
 
-  const fetchEquipos = async () => {
+  const fetchEquipos = () => {
     try {
       setLoading(true)
-      let query = supabase
-        .from('equipos')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      // Si no es admin, solo mostrar equipos del usuario
-      if (!isAdmin) {
-        query = query.eq('user_id', user?.id)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        toast.error('Error al cargar equipos: ' + error.message)
-        return
-      }
-
-      setEquipos(data || [])
+      const allEquipos = storage.getEquipos()
+      
+      // Si no es admin, solo mostrar equipos del usuario actual
+      const userEquipos = isAdmin ? allEquipos : allEquipos.filter(e => e.responsable === user?.nombre)
+      
+      setEquipos(userEquipos)
     } catch (error) {
-      toast.error('Error inesperado al cargar equipos')
+      toast.error('Error al cargar equipos')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este equipo?')) {
       return
     }
 
     try {
-      const { error } = await supabase
-        .from('equipos')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        toast.error('Error al eliminar equipo: ' + error.message)
-        return
+      const success = storage.deleteEquipo(id)
+      if (success) {
+        toast.success('Equipo eliminado correctamente')
+        fetchEquipos()
+      } else {
+        toast.error('Error al eliminar equipo')
       }
-
-      toast.success('Equipo eliminado correctamente')
-      fetchEquipos()
     } catch (error) {
       toast.error('Error inesperado al eliminar equipo')
     }
@@ -221,10 +204,11 @@ export default function EquiposList() {
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <code style={{ 
-                          backgroundColor: 'var(--background-color)',
+                          backgroundColor: 'var(--surface-secondary)',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
-                          fontSize: '0.75rem'
+                          fontSize: '0.75rem',
+                          color: 'var(--text-primary)'
                         }}>
                           {equipo.numero_serie}
                         </code>

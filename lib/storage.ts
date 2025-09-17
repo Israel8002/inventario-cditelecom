@@ -166,7 +166,16 @@ export const storage = {
         created_at: new Date().toISOString()
       }
       storage.saveUsuarios([adminUser])
-      storage.setCurrentUser(adminUser)
+      // No establecer como usuario actual automáticamente
     }
+  },
+
+  // Limpiar todos los datos
+  clearAllData: (): void => {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem('inventario_equipos')
+    localStorage.removeItem('inventario_usuarios')
+    localStorage.removeItem('inventario_reportes')
+    localStorage.removeItem('inventario_current_user')
   }
 }
